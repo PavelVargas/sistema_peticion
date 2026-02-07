@@ -10,54 +10,78 @@ from routes.registrarse.registrarse import registro_bp
 from routes.login.login import login_bp
 from routes.dashboard.dashboard import dashboard_bp
 
+# --------------------------------------------------
+# APP
+# --------------------------------------------------
 app = Flask(__name__)
 
-# ---------------- CONFIG ----------------
+# --------------------------------------------------
+# CONFIG GENERAL
+# --------------------------------------------------
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "clave_segura_123")
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
-# ---------------- DATABASE ----------------
+# --------------------------------------------------
+# DATABASE (RAILWAY O LOCAL)
+# --------------------------------------------------
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError("❌ DATABASE_URL no está definido en Railway")
 
+# Ajuste para SQLAlchemy + psycopg3
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
-        "postgres://", "postgresql+psycopg://", 1
+        "postgres://",
+        "postgresql+psycopg://",
+        1
     )
 elif DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace(
-        "postgresql://", "postgresql+psycopg://", 1
+        "postgresql://",
+        "postgresql+psycopg://",
+        1
     )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# ---------------- INIT DB ----------------
+# --------------------------------------------------
+# INIT DB
+# --------------------------------------------------
 db.init_app(app)
 
-# ---------------- BLUEPRINTS ----------------
+# --------------------------------------------------
+# BLUEPRINTS
+# --------------------------------------------------
 app.register_blueprint(registro_bp)
 app.register_blueprint(login_bp)
 app.register_blueprint(dashboard_bp)
 
-# ---------------- ROUTES ----------------
+# --------------------------------------------------
+# ROUTES
+# --------------------------------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
 
-# ---------------- DB SETUP ----------------
+# --------------------------------------------------
+# DB INIT + ADMIN
+# --------------------------------------------------
 with app.app_context():
     try:
-        db.session.execute(text("SELECT 1"))
-        print("🔥 CONEXIÓN A POSTGRES OK")
+        # Probar conexión
+        result = db.session.execute(text("SELECT 1"))
+        print("🔥 CONEXIÓN A POSTGRES OK:", result.scalar())
 
+        # Crear tablas
         db.create_all()
-        print("✅ Tablas creadas")
+        print("✅ Tablas creadas correctamente")
 
+        # Crear admin si no existe
         admin = User.query.filter_by(email="admin@villar.com").first()
+
         if not admin:
             admin = User(
                 name="admin_villar",
@@ -68,15 +92,17 @@ with app.app_context():
             )
             db.session.add(admin)
             db.session.commit()
-            print("👑 Usuario admin creado")
+            print("👑 Usuario admin creado correctamente")
         else:
-            print("ℹ️ Admin ya existe")
+            print("ℹ️ Usuario admin ya existe")
 
     except Exception as e:
         print("❌ ERROR DE BASE DE DATOS")
         print(e)
 
-# ---------------- RUN ----------------
+# --------------------------------------------------
+# RUN LOCAL (Railway usa Gunicorn)
+# --------------------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
