@@ -90,13 +90,12 @@ with app.app_context():
 # --------------------------------------------------
 # CREAR USUARIO ADMIN POR DEFECTO
 # --------------------------------------------------
-admin_name = "admin_villar"
-
-admin = User.query.filter_by(name=admin_name).first()
+admin = User.query.filter_by(email="admin@villar.com").first()
 
 if not admin:
     admin = User(
         name="admin_villar",
+        email="admin@villar.com",
         password="admin",
         role="admin",
         is_admin=True
@@ -105,7 +104,7 @@ if not admin:
     db.session.commit()
     print("👑 Usuario admin creado correctamente")
 else:
-    print("ℹ️ Usuario admin ya existe, no se creó de nuevo")
+    print("ℹ️ Usuario admin ya existe")
     
     
 # Railway usa Gunicorn automáticamente
