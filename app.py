@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Flask, render_template
 from db import db
 
@@ -21,13 +22,18 @@ if not os.path.exists(UPLOAD_FOLDER):
 database_url = os.environ.get("DATABASE_URL")
 
 if database_url:
-    # Corrección para SQLAlchemy 2.0 + Psycopg 3 en Railway
+    # 1. Adaptar driver para Psycopg 3
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
-    elif database_url.startswith("postgresql://") and "+psycopg" not in database_url:
+    elif "postgresql+psycopg://" not in database_url:
         database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    
+    # 2. Forzar modo SSL para Railway (Evita el "failed to respond")
+    if "?" not in database_url:
+        database_url += "?sslmode=require"
+    elif "sslmode" not in database_url:
+        database_url += "&sslmode=require"
 else:
-    # URL Local
     database_url = "postgresql+psycopg://postgres:postgres@localhost:5432/villar_peticiones"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
@@ -46,16 +52,18 @@ app.register_blueprint(dashboard_bp)
 def home():
     return render_template('index.html')
 
-# --- CREACIÓN DE TABLAS (PRODUCCIÓN) ---
-try:
-    with app.app_context():
-        db.create_all()
-        print("Tablas creadas o verificadas con éxito.")
-except Exception as e:
-    print(f"Error al conectar/crear tablas: {str(e)}")
+# --- CREACIÓN DE TABLAS CON REINTENTO ---
+with app.app_context():
+    for i in range(3):  # Intenta 3 veces por si la DB está arrancando
+        try:
+            db.create_all()
+            print("Tablas verificadas con éxito.")
+            break
+        except Exception as e:
+            print(f"Intento {i+1} fallido, esperando a la DB... {e}")
+            time.sleep(2)
 
-# --- ARRANQUE LOCAL ---
+# --- ARRANQUE ---
 if __name__ == '__main__':
-    # El puerto lo asigna Railway, en local usa 5000
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
