@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template
 from sqlalchemy import text
-
+from models.User.user import User
 from db import db
 
 # Blueprints
@@ -9,58 +9,105 @@ from routes.registrarse.registrarse import registro_bp
 from routes.login.login import login_bp
 from routes.dashboard.dashboard import dashboard_bp
 
+# --------------------------------------------------
+# APP
+# --------------------------------------------------
 app = Flask(__name__)
 
-# ---------------- CONFIG GENERAL ----------------
+# --------------------------------------------------
+# CONFIG GENERAL
+# --------------------------------------------------
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "clave_segura_123")
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
-# ---------------- DATABASE (RAILWAY READY) ----------------
-database_url = os.environ.get("DATABASE_URL")
+# --------------------------------------------------
+# DATABASE (RAILWAY / LOCAL)
+# --------------------------------------------------
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if not database_url:
-    # Fallback SOLO para local
-    database_url = "postgresql+psycopg://postgres:postgres@localhost:5432/villar_peticiones"
+if DATABASE_URL:
+    # Railway puede traer postgres:// o postgresql://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace(
+            "postgres://",
+            "postgresql+psycopg://",
+            1
+        )
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace(
+            "postgresql://",
+            "postgresql+psycopg://",
+            1
+        )
 else:
-    # Ajuste necesario para SQLAlchemy 2 + psycopg3
-    database_url = database_url.replace(
-        "postgresql://",
-        "postgresql+psycopg://"
-    )
+    # SOLO para desarrollo local
+    DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/villar_peticiones"
 
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# ---------------- INIT DB ----------------
+# --------------------------------------------------
+# INIT DB
+# --------------------------------------------------
 db.init_app(app)
 
-# ---------------- BLUEPRINTS ----------------
+# --------------------------------------------------
+# BLUEPRINTS
+# --------------------------------------------------
 app.register_blueprint(registro_bp)
 app.register_blueprint(login_bp)
 app.register_blueprint(dashboard_bp)
 
-# ---------------- ROUTES ----------------
+# --------------------------------------------------
+# ROUTES
+# --------------------------------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
 
-# ---------------- DB CHECK + CREATE TABLES ----------------
+# --------------------------------------------------
+# DB CHECK + CREATE TABLES
+# --------------------------------------------------
 with app.app_context():
     try:
-        # Prueba REAL de conexión a PostgreSQL
+        # Prueba real de conexión
         result = db.session.execute(text("SELECT 1"))
         print("🔥 CONEXIÓN A POSTGRES OK:", result.scalar())
 
-        # Crear tablas automáticamente
+        # Crear tablas
         db.create_all()
         print("✅ Tablas creadas correctamente")
 
     except Exception as e:
-        print("❌ ERROR DE BASE DE DATOS:")
+        print("❌ ERROR DE BASE DE DATOS")
         print(e)
 
-# ---------------- RUN LOCAL ----------------
+# --------------------------------------------------
+# RUN LOCAL
+# --------------------------------------------------
+
+# --------------------------------------------------
+# CREAR USUARIO ADMIN POR DEFECTO
+# --------------------------------------------------
+admin_name = "admin_villar"
+
+admin = User.query.filter_by(name=admin_name).first()
+
+if not admin:
+    admin = User(
+        name="admin_villar",
+        password="admin",
+        role="admin",
+        is_admin=True
+    )
+    db.session.add(admin)
+    db.session.commit()
+    print("👑 Usuario admin creado correctamente")
+else:
+    print("ℹ️ Usuario admin ya existe, no se creó de nuevo")
+    
+    
 # Railway usa Gunicorn automáticamente
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
