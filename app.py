@@ -47,12 +47,12 @@ def home():
     return render_template('index.html')
 
 # --- CREACIÓN DE TABLAS (PRODUCCIÓN) ---
-with app.app_context():
-    try:
+try:
+    with app.app_context():
         db.create_all()
-        print("Base de datos verificada/creada exitosamente.")
-    except Exception as e:
-        print(f"Error crítico en base de datos: {e}")
+        print("Tablas creadas o verificadas con éxito.")
+except Exception as e:
+    print(f"Error al conectar/crear tablas: {str(e)}")
 
 # --- ARRANQUE LOCAL ---
 if __name__ == '__main__':
