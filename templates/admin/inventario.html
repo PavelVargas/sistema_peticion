@@ -1,0 +1,239 @@
+{% if not is_ajax %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario | Villar Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/inventario.css">
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('villar_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">
+            <h2 style="font-weight: 900; letter-spacing: -1.5px; font-size: 1.5rem;">VILLAR <span style="color: var(--accent);">ADMIN</span></h2>
+            <div class="nav-links">
+                <a href="/admin" class="nav-link">📋 Solicitudes</a>
+                <a href="/admin/inventario" class="nav-link active">📦 Inventario</a>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="theme-toggle" onclick="toggleTheme()" style="cursor: pointer;">
+                <span id="theme-icon">🌙</span> <span id="theme-text">Modo Oscuro</span>
+            </div>
+            <a href="/dashboard" class="nav-link active">Panel Usuario</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-title">
+            <h1>📦 {% if vista == 'salidos' %}Historial de Salidas{% else %}Control de Inventario{% endif %}</h1>
+            <p class="subtitle">{% if vista == 'salidos' %}Resumen de productos despachados.{% else %}Gestión centralizada de existencias.{% endif %}</p>
+        </div>
+
+        <div class="header-actions">
+            <div class="filters">
+                <div class="view-tabs" style="margin-right: 20px; display: inline-flex; gap:8px; background: var(--bg-soft); padding: 5px; border-radius: 12px;">
+                    <a href="/admin/inventario?vista=stock" class="filter-btn {% if vista == 'stock' %}active{% endif %}" style="text-decoration:none;">Existencias</a>
+                    <a href="/admin/inventario?vista=salidos" class="filter-btn {% if vista == 'salidos' %}active{% endif %}" style="text-decoration:none; color: var(--danger);">🚩 Salidas</a>
+                </div>
+
+                <button class="filter-btn active" data-cat="Todas" onclick="setCategoria('Todas', this)">Todas</button>
+                {% for cat in categorias %}
+                <button class="filter-btn" data-cat="{{ cat }}" onclick="setCategoria('{{ cat }}', this)">{{ cat }}</button>
+                {% endfor %}
+            </div>
+            
+            <div class="search-group">
+                <input type="text" id="buscador" class="search-box" placeholder="🔍 Buscar producto..." onkeyup="filtrarTodo()">
+                {% if vista != 'salidos' %}
+                <button class="btn-action btn-clean" onclick="confirmarLimpieza()">🗑️ Limpiar</button>
+                <form action="/admin/subir_stock" method="POST" enctype="multipart/form-data" id="importForm" style="display: inline;">
+                    <input type="file" name="excel_stock" id="excel_stock" hidden onchange="document.getElementById('importForm').submit()">
+                    <label for="excel_stock" class="btn-action btn-import">📊 Excel</label>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <table id="tabla-inventario">
+                <thead>
+                    <tr>
+                        <th>Producto / Categoría</th>
+                        <th>{% if vista == 'salidos' %}Total Despachado{% else %}Existencia Actual{% endif %}</th>
+                        <th>Estado</th>
+                        {% if vista != 'salidos' %}<th>Acción de Retiro</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody id="tabla-body">
+{% endif %}
+                    {% for prod in productos %}
+                    <tr class="fila-prod" id="row-{{ prod.id }}" data-categoria="{{ prod.categoria }}">
+                        <td>
+                            <div class="prod-info">
+                                <span class="prod-name" style="font-weight: 700;">{{ prod.nombre }}</span>
+                                <span class="prod-cat">📁 {{ prod.categoria }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="stock-val" id="num-{{ prod.id }}" style="font-weight: 800; font-family: monospace; font-size: 1.1rem; {% if vista == 'salidos' %}color: var(--danger);{% endif %}">
+                                {{ prod.cantidad }}
+                            </span>
+                        </td>
+                        <td id="status-{{ prod.id }}">
+                            {% if vista == 'salidos' %}
+                                <span class="status-pill" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">ENTREGADO</span>
+                            {% else %}
+                                {% if prod.cantidad <= 0 %}
+                                    <span class="status-pill status-Agotado">Agotado</span>
+                                {% elif prod.cantidad < 10 %}
+                                    <span class="status-pill status-Bajo">Bajo Stock</span>
+                                {% else %}
+                                    <span class="status-pill status-Ok">En Stock</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        {% if vista != 'salidos' %}
+                        <td>
+                            <div class="withdraw-group">
+                                <input type="number" id="input-{{ prod.id }}" class="input-withdraw" value="1" min="1">
+                                <button class="btn-withdraw" onclick="descontar({{ prod.id }})">Retirar</button>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+{% if not is_ajax %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+   <script>
+        // --- 1. TEMA ---
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('villar_theme', theme);
+            const icon = document.getElementById('theme-icon');
+            if(icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        // --- 2. FILTROS Y BUSQUEDA ---
+        let catActual = 'Todas';
+
+        function setCategoria(cat, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            catActual = cat;
+            filtrarTodo();
+        }
+
+        function filtrarTodo() {
+            const texto = document.getElementById('buscador').value.toLowerCase();
+            document.querySelectorAll('.fila-prod').forEach(fila => {
+                const nombre = fila.querySelector('.prod-name').innerText.toLowerCase();
+                const categoria = fila.dataset.categoria;
+                const matchTexto = nombre.includes(texto);
+                const matchCat = catActual === 'Todas' || categoria === catActual;
+                fila.style.display = (matchTexto && matchCat) ? "" : "none";
+            });
+        }
+
+        // --- 3. TIEMPO REAL (POLLING) ---
+        function fetchInventario() {
+            // No actualizar si el usuario está interactuando con un input
+            if (document.activeElement.classList.contains('input-withdraw')) return;
+
+            const vista = new URLSearchParams(window.location.search).get('vista') || 'stock';
+            
+            return fetch(`/admin/inventario?vista=${vista}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.text())
+            .then(html => {
+                const tbody = document.getElementById('tabla-body');
+                if (html.trim() !== "") {
+                    tbody.innerHTML = html;
+                    filtrarTodo(); 
+                }
+            })
+            .catch(err => console.warn("Error actualizando inventario"));
+        }
+
+        // --- 4. ACCIONES ---
+        function descontar(id) {
+            const input = document.getElementById(`input-${id}`);
+            const cantidad = parseInt(input.value);
+            if (isNaN(cantidad) || cantidad <= 0) return alert("Cantidad inválida");
+
+            fetch(`/admin/descontar/${id}`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cantidad: cantidad })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    const numElement = document.getElementById(`num-${id}`);
+                    numElement.innerText = data.nueva_cantidad;
+                    actualizarBadge(id, data.nueva_cantidad);
+                    input.value = 1;
+                    
+                    numElement.style.color = 'var(--accent)';
+                    setTimeout(() => numElement.style.color = '', 800);
+                } else { alert(data.error); }
+            });
+        }
+
+        function actualizarBadge(id, cant) {
+            const cell = document.getElementById(`status-${id}`);
+            if(!cell) return;
+            if(cant <= 0) cell.innerHTML = '<span class="status-pill status-Agotado">Agotado</span>';
+            else if(cant < 10) cell.innerHTML = '<span class="status-pill status-Bajo">Bajo Stock</span>';
+            else cell.innerHTML = '<span class="status-pill status-Ok">En Stock</span>';
+        }
+
+        // --- CORRECCIÓN CLAVE AQUÍ ---
+        function confirmarLimpieza() {
+            if (confirm("⚠️ ¿Estás seguro? Se eliminarán TODOS los productos del inventario.")) {
+                fetch('/admin/limpiar_inventario', { 
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' } 
+                })
+                .then(r => r.json())
+                .then(data => { 
+                    if(data.success) {
+                        // Forzamos la actualización inmediata de la tabla
+                        fetchInventario().then(() => {
+                            alert("Inventario vaciado correctamente.");
+                        });
+                    } else {
+                        alert("Error: " + data.error);
+                    }
+                })
+                .catch(err => alert("Error de conexión al limpiar."));
+            }
+        }
+
+        // --- 5. INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(localStorage.getItem('villar_theme') || 'light');
+            setInterval(fetchInventario, 4000);
+        });
+    </script>
+    
+</body>
+</html>
+{% endif %}

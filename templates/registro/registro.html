@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Usuarios | Villar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/registrarte.css">
+</head>
+<body>
+
+    <div class="register-card">
+        <div class="header">
+            <h1>Crea tu cuenta</h1>
+            <p>Regístrate para gestionar tus peticiones</p>
+        </div>
+
+        <form action="/registro" method="post">
+            <div class="form-group">
+                <label>Nombre de usuario</label>
+                <input type="text" placeholder="Tu nombre o usuario" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label>Correo electrónico</label>
+                <input type="email" placeholder="ejemplo@villar.com" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" placeholder="Crea una contraseña" name="password" required>
+            </div>
+
+            <div class="form-group">
+                <label>Sucursal correspondiente</label>
+                <select name="sucursal" id="sucursal" required>
+                    <option value="" disabled selected>Selecciona tu sucursal</option>
+                    <option value="Agora">Agora</option>
+                    <option value="Bella vista">Bella vista</option>
+                    <option value="Megacentro">Megacentro</option>
+                    <option value="Metro">Metro</option>
+                </select>
+            </div>
+
+            <button type="submit">Finalizar Registro</button>
+        </form>
+
+        <div class="footer">
+            ¿Ya tienes una cuenta? <a href="/login">Inicia sesión aquí</a>
+        </div>
+    </div>
+
+</body>
+</html>

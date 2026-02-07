@@ -1,0 +1,149 @@
+{% if not is_ajax %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control | Villar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('villar_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="brand-logo">
+            VILLAR <span style="color: var(--accent);">USER</span>
+        </div>
+        
+        <div class="user-card-sidebar">
+            <div class="avatar-sidebar">{{ user.username[0]|upper }}</div>
+            <div class="user-info-sidebar">
+                <strong>{{ user.username }}</strong>
+                <span>{{ user.sucursal }}</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="theme-switch" onclick="toggleTheme()">
+                <span id="themeIcon">🌙</span> <span id="themeText">Modo Oscuro</span>
+            </div>
+
+            {% if user.is_admin %}
+            <a href="/admin" class="admin-nav-link">📋 Panel Administrador</a>
+            {% endif %}
+            
+            <a href="/logout" class="logout-link">🚪 Cerrar Sesión</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="header-section">
+            <div class="header-text">
+                <h1>Mis Peticiones</h1>
+                <p>Gestiona y monitorea tus solicitudes enviadas.</p>
+            </div>
+            <button class="btn-new" onclick="openModal()">+ Nueva Solicitud</button>
+        </header>
+
+        <div id="historial-peticiones" class="requests-container">
+{% endif %}
+            {% for p in peticiones %}
+            <div class="request-row" 
+                 id="peticion-{{ p.id }}"
+                 data-created="{{ p.fecha_creacion.isoformat() }}" 
+                 data-status="{{ p.estado }}">
+                
+                <div class="request-info">
+                    <div class="request-upper">
+                        <span class="status-pill status-{{ p.estado }}">{{ p.estado }}</span>
+                        <span class="request-date">📅 {{ p.fecha_creacion.strftime('%d %b, %Y') }}</span>
+                    </div>
+                    <h4 class="request-title">{{ p.titulo }}</h4>
+                    <p class="request-desc">{{ p.descripcion[:150] }}{% if p.descripcion|length > 150 %}...{% endif %}</p>
+                    
+                    {% if p.productos_solicitados %}
+                    <div class="tags-container">
+                        {% for item in p.productos_solicitados %}
+                        <span class="material-tag">{{ item.producto.nombre }} ({{ item.cantidad_solicitada }})</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="request-meta">
+                    <div class="timer-box">
+                        <span class="meta-label">TIEMPO ACTIVO</span>
+                        <span class="timer-text">00:00:00</span>
+                    </div>
+                    {% if p.archivo_adjunto %}
+                    <a href="{{ url_for('static', filename='uploads/' + p.archivo_adjunto) }}" 
+                       class="btn-file" target="_blank">📄 Documento</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>No hay peticiones registradas aún.</p>
+            </div>
+            {% endfor %}
+{% if not is_ajax %}
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <button onclick="closeModal()" class="close-modal-btn">✕</button>
+            <h2 style="font-weight: 800; margin-bottom: 2rem; letter-spacing: -1px;">Crear Nueva Solicitud</h2>
+            <form action="/dashboard" method="POST" enctype="multipart/form-data">
+                <div class="modal-form-grid">
+                    <div class="span-2 input-group">
+                        <label>TÍTULO DEL ASUNTO</label>
+                        <input type="text" name="titulo" placeholder="Ej: Reposición de insumos" required>
+                    </div>
+                    <div class="span-2 input-group">
+                        <label>DESCRIPCIÓN DETALLADA</label>
+                        <textarea name="descripcion" placeholder="Explica detalladamente qué necesitas..." rows="3" required></textarea>
+                    </div>
+                    <div class="span-2 stock-selector">
+                        <label>📦 SOLICITAR ARTÍCULOS DE INVENTARIO</label>
+                        <input type="text" id="modalSearch" class="search-mini" placeholder="🔍 Buscar producto..." onkeyup="filterModalProducts()" style="margin: 10px 0;">
+                        <div class="productos-grid" id="modalProdGrid">
+                            {% for prod in productos_stock %}
+                            <div class="prod-card" id="card-{{ prod.id }}" data-name="{{ prod.nombre.lower() }}">
+                                <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                    <input type="checkbox" name="productos_ids" value="{{ prod.id }}" id="p-{{ prod.id }}" onchange="updateProductRow('{{ prod.id }}')">
+                                    <label for="p-{{ prod.id }}" style="cursor: pointer; flex: 1;">
+                                        <span style="font-weight: 700; font-size: 0.85rem;">{{ prod.nombre }}</span>
+                                        <small style="color: var(--text-light); display:block;">Disp: {{ prod.cantidad }}</small>
+                                    </label>
+                                </div>
+                                <div class="cant-wrapper" id="wrapper-{{ prod.id }}" style="opacity: 0.4; pointer-events: none;">
+                                    <input type="number" name="cant_{{ prod.id }}" class="cant-input" value="1" min="1" max="{{ prod.cantidad }}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="span-2 input-group">
+                        <label>SOPORTE DOCUMENTAL</label>
+                        <label for="archivo" class="file-zone">
+                            <span id="file-name-text">Haz clic para adjuntar archivo</span>
+                            <input type="file" name="archivo" id="archivo" hidden onchange="displayFileName()">
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Enviar Requerimiento</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/js_dashboard.js"></script>
+</body>
+</html>
+{% endif %}

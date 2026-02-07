@@ -1,0 +1,129 @@
+   /* =========================================
+           VARIABLES Y TEMAS (COHERENCIA VISUAL)
+           ========================================= */
+        :root { 
+            --primary: #0f172a; --accent: #2563eb; --accent-soft: rgba(37, 99, 235, 0.1);
+            --bg: #f1f5f9; --white: #ffffff; --border: #e2e8f0; --danger: #ef4444; 
+            --success: #10b981; --warning: #f59e0b; --text-main: #0f172a; --text-muted: #64748b;
+            --card-bg: #ffffff; --table-head: #f8fafc;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0b0f1a; --white: #161b2c; --card-bg: #161b2c;
+            --primary: #f1f5f9; --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --border: #262f45; --table-head: #1e293b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; transition: background 0.3s, border-color 0.3s; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.6; }
+        
+        /* NAVEGACIÓN */
+        nav { 
+            background: var(--white); padding: 0.8rem 2rem; border-bottom: 1px solid var(--border); 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px);
+        }
+        
+        .nav-brand { display: flex; align-items: center; gap: 20px; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-link {
+            text-decoration: none; color: var(--text-muted); font-weight: 700; font-size: 0.85rem;
+            padding: 10px 18px; border-radius: 12px; transition: 0.3s;
+        }
+        .nav-link:hover { background: var(--bg); color: var(--accent); }
+        .nav-link.active { background: var(--accent-soft); color: var(--accent); }
+
+        .theme-toggle {
+            cursor: pointer; padding: 10px 16px; border-radius: 12px; background: var(--bg);
+            border: 1px solid var(--border); font-size: 0.8rem; font-weight: 800; color: var(--text-main);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .container { max-width: 1400px; margin: 2rem auto; padding: 0 2rem; }
+        
+        .header-title { margin-bottom: 2rem; }
+        .header-title h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+        .subtitle { color: var(--text-muted); font-weight: 600; font-size: 0.95rem; }
+
+        /* ACCIONES Y FILTROS */
+        .header-actions { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 2rem; flex-wrap: wrap; gap: 1.5rem; 
+        }
+
+        .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-btn { 
+            background: var(--white); border: 1px solid var(--border); padding: 0.7rem 1.2rem; 
+            border-radius: 12px; cursor: pointer; font-weight: 700; color: var(--text-muted); 
+            transition: 0.3s; font-size: 0.85rem;
+        }
+        .filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 8px 15px -3px rgba(37, 99, 235, 0.2); }
+
+        .search-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .search-box { 
+            padding: 0.8rem 1.2rem; border-radius: 14px; border: 1.5px solid var(--border); 
+            background: var(--white); color: var(--text-main); width: 280px; font-family: inherit; font-weight: 600;
+        }
+        .search-box:focus { border-color: var(--accent); outline: none; }
+
+        /* BOTONES ESPECIALES */
+        .btn-action { 
+            padding: 0.8rem 1.4rem; border-radius: 12px; font-weight: 800; font-size: 0.85rem; 
+            cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.3s; border: none;
+        }
+        .btn-import { background: var(--accent); color: white; }
+        .btn-clean { background: var(--white); color: var(--danger); border: 1.5px solid var(--danger); }
+        .btn-clean:hover { background: var(--danger); color: white; }
+
+        /* TABLA DE INVENTARIO */
+        .admin-card { 
+            background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); 
+            overflow: hidden; box-shadow: 0 15px 30px -5px rgba(0,0,0,0.05); 
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th { 
+            background: var(--table-head); padding: 1.2rem; text-align: left; 
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted); border-bottom: 1px solid var(--border); 
+        }
+        td { padding: 1.2rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        
+        .prod-info { display: flex; flex-direction: column; gap: 4px; }
+        .prod-name { font-weight: 800; font-size: 1rem; color: var(--text-main); }
+        .prod-cat { font-size: 0.7rem; font-weight: 800; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 6px; width: fit-content; }
+
+        .stock-val { font-family: 'Courier New', Courier, monospace; font-weight: 800; font-size: 1.2rem; }
+
+        /* STATUS PILLS */
+        .status-pill { padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 800; }
+        .status-Ok { background: #ecfdf5; color: #065f46; }
+        .status-Bajo { background: #fff7ed; color: #9a3412; }
+        .status-Agotado { background: #fef2f2; color: #991b1b; }
+
+        /* CONTROLES DE RETIRO */
+        .withdraw-group { display: flex; align-items: center; gap: 8px; background: var(--bg); padding: 6px; border-radius: 12px; width: fit-content; }
+        .input-withdraw { 
+            width: 55px; border: none; background: transparent; text-align: center; 
+            font-weight: 800; font-size: 1rem; color: var(--text-main); outline: none;
+        }
+        .btn-withdraw { 
+            background: var(--danger); color: white; border: none; padding: 8px 14px; 
+            border-radius: 8px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-withdraw:hover { transform: scale(1.05); filter: brightness(1.1); }
+
+        @media (max-width: 900px) {
+            .header-actions { flex-direction: column; align-items: stretch; }
+            .search-box { width: 100%; }
+        }
+
+        /* Estados en inventario.css */
+.status-pill {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.status-Ok { background: #dcfce7; color: #166534; }      /* Verde */
+.status-Bajo { background: #fef9c3; color: #854d0e; }    /* Amarillo */
+.status-Agotado { background: #fee2e2; color: #991b1b; } /* Rojo */

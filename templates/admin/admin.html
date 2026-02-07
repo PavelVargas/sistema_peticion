@@ -1,0 +1,174 @@
+{% if not is_ajax %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | Villar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <nav>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <h2 style="font-weight: 900; letter-spacing: -1.5px; font-size: 1.5rem;">VILLAR <span style="color: var(--accent);">ADMIN</span></h2>
+            <div class="nav-links">
+                <a href="/admin" class="nav-link active">📋 Solicitudes</a>
+                <a href="/admin/inventario" class="nav-link">📦 Inventario</a>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="theme-toggle" onclick="toggleTheme()" style="cursor: pointer;">
+                <span id="theme-icon">🌙</span> <span id="theme-text">Modo Oscuro</span>
+            </div>
+            <a href="/dashboard" style="text-decoration: none; color: var(--accent); font-weight: 800; font-size: 0.85rem; padding: 10px 18px; border-radius: 12px; background: var(--accent-soft);">Panel Usuario</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-title">
+            <h1>Gestión de Solicitudes</h1>
+            <p style="color: var(--text-muted); font-weight: 600;">Monitoreo en tiempo real de requerimientos por sucursal.</p>
+        </div>
+        
+        <div class="filters">
+            <button class="filter-btn active" data-sucursal="Todas">Todas las sucursales</button>
+            <button class="filter-btn" data-sucursal="Agora">Agora Mall</button>
+            <button class="filter-btn" data-sucursal="Bella vista">Bella Vista</button>
+            <button class="filter-btn" data-sucursal="Megacentro">Megacentro</button>
+            <button class="filter-btn" data-sucursal="Metro">Metro</button>
+        </div>
+
+        <div class="admin-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Solicitante</th>
+                        <th>Detalle de Petición</th>
+                        <th>Tiempo Transcurrido</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="peticiones-content">
+{% endif %}
+                    {% for p in peticiones %}
+                    <tr id="peticion-{{ p.id }}" class="peticion-row" 
+                        data-sucursal="{{ p.user.sucursal }}" 
+                        data-status="{{ p.estado }}"
+                        data-created="{{ p.fecha_creacion.isoformat() }}">
+                        <td>
+                            <div class="user-info">
+                                <strong style="font-size: 1rem; display: block;">{{ p.user.username }}</strong>
+                                <span class="sucursal-tag">{{ p.user.sucursal|upper }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="peticion-content">
+                                <p class="peticion-title" style="font-weight: 800; margin-bottom: 4px;">{{ p.titulo }}</p>
+                                <span class="peticion-desc" style="color: var(--text-muted); font-size: 0.85rem;">{{ p.descripcion[:60] }}{% if p.descripcion|length > 60 %}...{% endif %}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="time-box">
+                                <span class="hora-exacta" style="font-size: 0.7rem; opacity: 0.7; display: block; margin-bottom: 5px;">Registrado: {{ p.fecha_creacion.strftime('%I:%M %p') }}</span>
+                                <div class="timer-val" id="timer-{{ p.id }}">00:00:00</div>
+                                <div class="atraso-label" id="atraso-{{ p.id }}" style="display:none; color: var(--danger); font-size: 0.65rem; font-weight: 800; margin-top: 5px;">⚠️ ATRASADO (+24h)</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-pill status-{{ p.estado }}" id="pill-{{ p.id }}">
+                                {{ p.estado }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group-wrapper">
+                                <button class="btn-view" onclick="abrirDetalles({{ p.id }})">
+                                    👁️ Ver Detalles
+                                </button>
+                                
+                                <div class="btn-group" id="btn-group-{{ p.id }}">
+                                    {% if p.estado != 'Enviado' %}
+                                        <button class="action-btn {% if p.estado == 'Preparando' %}active-prep{% endif %}" 
+                                                onclick="cambiarEstado({{ p.id }}, 'Preparando')" title="Preparar">🛠️</button>
+                                        <button class="action-btn btn-send" 
+                                                onclick="cambiarEstado({{ p.id }}, 'Enviado')" title="Enviar y Descontar Stock">🚚</button>
+                                    {% else %}
+                                        <div class="finalizado-label">✅ Solicitud completada</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <template id="template-{{ p.id }}">
+                                <div class="modal-body-content">
+                                    <div class="modal-section" style="margin-bottom: 20px;">
+                                        <label style="font-size: 0.7rem; font-weight: 800; color: var(--accent);">SOLICITANTE</label>
+                                        <p style="font-size: 0.95rem;"><strong>{{ p.user.username }}</strong> (Sede: {{ p.user.sucursal }})</p>
+                                    </div>
+                                    
+                                    <div class="modal-section" style="margin-bottom: 20px;">
+                                        <label style="font-size: 0.7rem; font-weight: 800; color: var(--accent);">DESCRIPCIÓN</label>
+                                        <div class="desc-box" style="margin-top: 5px;">{{ p.descripcion }}</div>
+                                    </div>
+
+                                    <div class="modal-section" style="margin-top: 25px;">
+                                        <label style="font-weight: 800; font-size: 0.75rem; color: var(--accent); text-transform: uppercase;">
+                                            📦 PRODUCTOS SOLICITADOS
+                                        </label>
+                                        <div class="productos-lista" style="margin-top: 10px;">
+                                            {% if p.productos_solicitados %}
+                                                {% for item in p.productos_solicitados %}
+                                                <div class="producto-item" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 12px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border);">
+                                                    <span style="font-weight: 700; font-size: 0.9rem;">
+                                                        📦 {{ item.producto.nombre }}
+                                                    </span>
+                                                    <span class="badge-qty" style="background: var(--accent); color: white; padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 0.85rem;">
+                                                        {{ item.cantidad_solicitada }} ud.
+                                                    </span>
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; color: var(--danger); font-size: 0.85rem; text-align: center; border: 1px solid var(--danger);">
+                                                    Esta solicitud no contiene artículos de inventario.
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    {% if p.archivo_adjunto %}
+                                    <div class="modal-section" style="margin-top: 25px;">
+                                        <button class="btn-view" onclick="verArchivo('{{ url_for('static', filename='uploads/' + p.archivo_adjunto) }}')">
+                                            📄 VER ARCHIVO ADJUNTO
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </template>
+                        </td>
+                    </tr>
+                    {% endfor %}
+{% if not is_ajax %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modalDetails" class="modal-overlay" onclick="cerrarModalClickFuera(event, 'modalDetails')">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 style="font-weight: 800; letter-spacing: -1px;">Detalle de Solicitud</h2>
+                <span class="close-btn" onclick="cerrarDetalles()" style="cursor: pointer; font-size: 1.5rem;">&times;</span>
+            </div>
+            <div id="modal-inject-content" class="modal-scroll-area">
+                </div>
+            <div class="modal-footer" style="text-align: right; margin-top: 20px;">
+                <button class="btn-view" onclick="cerrarDetalles()" style="width: auto; padding: 10px 30px;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="/static/js/js_admin.js"></script>
+</body>
+</html>
+{% endif %}
