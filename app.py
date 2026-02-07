@@ -22,18 +22,15 @@ if not os.path.exists(UPLOAD_FOLDER):
 database_url = os.environ.get("DATABASE_URL")
 
 if database_url:
-    # 1. Adaptar driver para Psycopg 3
+    # 1. Adaptar driver para Psycopg 3 (Necesario para SQLAlchemy 2.0)
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
     elif "postgresql+psycopg://" not in database_url:
         database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     
-    # 2. Forzar modo SSL para Railway (Evita el "failed to respond")
-    if "?" not in database_url:
-        database_url += "?sslmode=require"
-    elif "sslmode" not in database_url:
-        database_url += "&sslmode=require"
+    # NOTA: Se eliminó el forzado de sslmode=require para compatibilidad con la red interna de Railway
 else:
+    # URL Local
     database_url = "postgresql+psycopg://postgres:postgres@localhost:5432/villar_peticiones"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
@@ -54,16 +51,17 @@ def home():
 
 # --- CREACIÓN DE TABLAS CON REINTENTO ---
 with app.app_context():
-    for i in range(3):  # Intenta 3 veces por si la DB está arrancando
+    for i in range(3):  
         try:
             db.create_all()
-            print("Tablas verificadas con éxito.")
+            print("--- CONEXIÓN EXITOSA: Tablas verificadas ---")
             break
         except Exception as e:
-            print(f"Intento {i+1} fallido, esperando a la DB... {e}")
-            time.sleep(2)
+            print(f"--- INTENTO {i+1} FALLIDO: Esperando base de datos interna... {e} ---")
+            time.sleep(3)
 
 # --- ARRANQUE ---
 if __name__ == '__main__':
+    # Railway detectará que el servidor está listo en el puerto asignado
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
