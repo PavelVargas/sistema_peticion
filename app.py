@@ -22,15 +22,22 @@ if not os.path.exists(UPLOAD_FOLDER):
 database_url = os.environ.get("DATABASE_URL")
 
 if database_url:
-    # 1. Adaptar driver para Psycopg 3 (Necesario para SQLAlchemy 2.0)
+    database_url = database_url.strip()
+    # 1. Asegurar el dialecto correcto para Psycopg 3
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
     elif "postgresql+psycopg://" not in database_url:
         database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     
-    # NOTA: Se eliminó el forzado de sslmode=require para compatibilidad con la red interna de Railway
+    # 2. Forzar sslmode=disable para evitar el error de startup packet en red interna
+    if "?" in database_url:
+        # Si ya tiene parámetros, quitamos sslmode previo y ponemos disable
+        base_url = database_url.split("?")[0]
+        database_url = f"{base_url}?sslmode=disable"
+    else:
+        database_url += "?sslmode=disable"
 else:
-    # URL Local
+    # Local
     database_url = "postgresql+psycopg://postgres:postgres@localhost:5432/villar_peticiones"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
@@ -49,19 +56,19 @@ app.register_blueprint(dashboard_bp)
 def home():
     return render_template('index.html')
 
-# --- CREACIÓN DE TABLAS CON REINTENTO ---
+# --- CREACIÓN DE TABLAS (PROCESO DE ARRANQUE) ---
 with app.app_context():
-    for i in range(3):  
+    for i in range(5):
         try:
             db.create_all()
-            print("--- CONEXIÓN EXITOSA: Tablas verificadas ---")
+            print("--- SISTEMA: Base de datos conectada y tablas listas ---")
             break
         except Exception as e:
-            print(f"--- INTENTO {i+1} FALLIDO: Esperando base de datos interna... {e} ---")
-            time.sleep(3)
+            print(f"--- SISTEMA: Intento {i+1} de conexion fallido. Reintentando... {e}")
+            time.sleep(5)
 
-# --- ARRANQUE ---
+# --- INICIO DEL SERVIDOR ---
 if __name__ == '__main__':
-    # Railway detectará que el servidor está listo en el puerto asignado
+    # Railway inyecta el puerto automáticamente
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
