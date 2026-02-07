@@ -1,108 +1,88 @@
 import os
-from flask import Flask, render_template
-from sqlalchemy import text
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
-from db import db
-from models.User.user import User
+# =========================
+# CONFIGURACIÓN BASE
+# =========================
 
-# Blueprints
-from routes.registrarse.registrarse import registro_bp
-from routes.login.login import login_bp
-from routes.dashboard.dashboard import dashboard_bp
-
-# --------------------------------------------------
-# APP
-# --------------------------------------------------
 app = Flask(__name__)
 
-# --------------------------------------------------
-# CONFIG GENERAL
-# --------------------------------------------------
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "clave_segura_123")
-app.config["UPLOAD_FOLDER"] = "static/uploads"
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
-
-# --------------------------------------------------
-# DATABASE (RAILWAY O LOCAL)
-# --------------------------------------------------
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError("❌ DATABASE_URL no está definido en Railway")
 
-# Ajuste para SQLAlchemy + psycopg3
+# Fix para postgres:// → postgresql://
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace(
-        "postgres://",
-        "postgresql+psycopg://",
-        1
-    )
-elif DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace(
-        "postgresql://",
-        "postgresql+psycopg://",
-        1
-    )
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = "super-secret-key"
 
-# --------------------------------------------------
-# INIT DB
-# --------------------------------------------------
-db.init_app(app)
+db = SQLAlchemy(app)
 
-# --------------------------------------------------
-# BLUEPRINTS
-# --------------------------------------------------
-app.register_blueprint(registro_bp)
-app.register_blueprint(login_bp)
-app.register_blueprint(dashboard_bp)
+print("✅ DATABASE_URL cargado correctamente")
 
-# --------------------------------------------------
-# ROUTES
-# --------------------------------------------------
-@app.route("/")
-def home():
-    return render_template("index.html")
+# =========================
+# MODELO USER
+# =========================
 
-# --------------------------------------------------
-# DB INIT + ADMIN
-# --------------------------------------------------
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(50), default="user")
+    is_admin = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f"<User {self.email}>"
+
+# =========================
+# CREAR TABLAS Y ADMIN
+# =========================
+
 with app.app_context():
     try:
-        # Probar conexión
-        result = db.session.execute(text("SELECT 1"))
-        print("🔥 CONEXIÓN A POSTGRES OK:", result.scalar())
-
-        # Crear tablas
         db.create_all()
-        print("✅ Tablas creadas correctamente")
+        print("✅ Tablas creadas/verificadas")
 
-        # Crear admin si no existe
         admin = User.query.filter_by(email="admin@villar.com").first()
 
         if not admin:
             admin = User(
                 name="admin_villar",
                 email="admin@villar.com",
-                password="admin",
+                password="admin",  # ❗ sin encriptar (como pediste)
                 role="admin",
                 is_admin=True
             )
             db.session.add(admin)
             db.session.commit()
-            print("👑 Usuario admin creado correctamente")
+            print("✅ Usuario admin creado correctamente")
         else:
             print("ℹ️ Usuario admin ya existe")
 
     except Exception as e:
         print("❌ ERROR DE BASE DE DATOS")
         print(e)
+        raise e
 
-# --------------------------------------------------
-# RUN LOCAL (Railway usa Gunicorn)
-# --------------------------------------------------
+# =========================
+# RUTA DE PRUEBA
+# =========================
+
+@app.route("/")
+def home():
+    return "🚀 Flask + PostgreSQL + Railway funcionando correctamente"
+
+# =========================
+# ENTRYPOINT LOCAL
+# =========================
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8080)
