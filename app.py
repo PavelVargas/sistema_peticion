@@ -67,6 +67,26 @@ def home():
     return render_template("index.html")
 
 # --------------------------------------------------
+# CREAR USUARIO ADMIN POR DEFECTO
+# --------------------------------------------------
+admin = User.query.filter_by(email="admin@villar.com").first()
+
+if not admin:
+    admin = User(
+        name="admin_villar",
+        email="admin@villar.com",
+        password="admin",
+        role="admin",
+        is_admin=True
+    )
+    db.session.add(admin)
+    db.session.commit()
+    print("👑 Usuario admin creado correctamente")
+else:
+    print("ℹ️ Usuario admin ya existe")
+    
+    
+# --------------------------------------------------
 # DB CHECK + CREATE TABLES
 # --------------------------------------------------
 with app.app_context():
@@ -86,26 +106,6 @@ with app.app_context():
 # --------------------------------------------------
 # RUN LOCAL
 # --------------------------------------------------
-
-# --------------------------------------------------
-# CREAR USUARIO ADMIN POR DEFECTO
-# --------------------------------------------------
-admin = User.query.filter_by(email="admin@villar.com").first()
-
-if not admin:
-    admin = User(
-        name="admin_villar",
-        email="admin@villar.com",
-        password="admin",
-        role="admin",
-        is_admin=True
-    )
-    db.session.add(admin)
-    db.session.commit()
-    print("👑 Usuario admin creado correctamente")
-else:
-    print("ℹ️ Usuario admin ya existe")
-    
     
 # Railway usa Gunicorn automáticamente
 if __name__ == "__main__":
